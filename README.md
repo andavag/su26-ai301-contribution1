@@ -1,15 +1,17 @@
-# Contribution [#]: [Issue Title]
+# Contribution [#]: [Add compatibility test for $minN (array element) ]
 
-**Contribution Number:** [1 / 2 / 3]  
-**Student:** [Your Name]  
-**Issue:** [GitHub issue link]  
-**Status:** [Phase I / Phase II / Phase III / Phase IV] [In Progress / Complete]
+**Contribution Number:** 1   
+**Student:** Andranik Avagyan  
+**Issue:** https://github.com/documentdb/functional-tests/issues/201  
+**Status:** Phase I In Progress
 
 ---
 
 ## Why I Chose This Issue
 
-[1-2 paragraphs explaining why this issue interests you, how it matches your skills/learning goals, what you hope to learn]
+I chose this issue because it is an ideal entry point for my first open-source contribution. Since the task focuses on writing compatibility tests in Python—a language I am comfortable with from my previous project work—it allows me to make a meaningful impact without requiring an overwhelming initial knowledge of the entire codebase.
+
+I am particularly excited to study the existing test architecture to understand how seasoned developers validate database operators. This issue provides the perfect opportunity to learn how to navigate a large repository, follow established patterns, and contribute high-quality code to a project that aligns with my long-term interest in database systems.
 
 ---
 
