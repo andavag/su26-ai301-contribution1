@@ -5,7 +5,7 @@
 **Issue:** https://github.com/documentdb/functional-tests/issues/201  
 **Project Fork:** https://github.com/andavag/functional-tests  
 **Working Branch:** https://github.com/andavag/functional-tests/tree/fix-issue-201  
-**Status:** Phase II Complete
+**Status:** Phase III Implementation Complete - Local Verification Passed, Commit Pending
 
 ---
 
@@ -13,7 +13,7 @@
 
 I chose this issue because it is a good first open-source contribution: the scope is focused, the project has clear Python/pytest contribution documentation, and the work improves compatibility coverage for a specific MongoDB aggregation expression operator.
 
-This issue also gives me practice navigating an established test framework, following existing test patterns, and writing a test that documents expected database behavior.
+This issue also gives me practice navigating an established test framework, following existing test patterns, and writing tests that document expected database behavior.
 
 ---
 
@@ -33,9 +33,9 @@ Issue #201 asks for additional compatibility test coverage for the `$minN` array
 
 It should return the minimum `n` elements from the input array. MongoDB's documentation states that `n` resolves to a positive integer and `input` resolves to the array to read from.
 
-### Current Behavior
+### Starting Behavior
 
-The repository currently has this smoke test:
+The repository already had this smoke test:
 
 `documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_smoke_expression_minN-array-element.py`
 
@@ -45,16 +45,20 @@ That test verifies a basic numeric array case:
 {"$project": {"minTwo": {"$minN": {"n": 2, "input": "$values"}}}}
 ```
 
-The issue is still open, so the missing work is likely deeper second-pass coverage such as null handling, `n` larger than the number of usable values, duplicate values, or type/error behavior.
+The missing second-pass coverage included deeper behavior such as null handling, `n` larger than the number of usable values, and invalid `n` values.
 
 ### Affected Components
 
-- `documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_smoke_expression_minN-array-element.py`
+- `documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_minN-array-element_null_filtering.py`
+- `documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_minN-array-element_n_validation.py`
+- `documentdb_tests/framework/error_codes.py`
+- `documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_smoke_expression_minN-array-element.py` as the existing baseline smoke test, left unchanged
 - `documentdb_tests/compatibility/tests/core/operator/expressions/array/maxN-array-element/test_smoke_expression_maxN-array-element.py` as the closest sibling pattern
-- `documentdb_tests/framework/assertions.py` for `assertSuccess`
+- `documentdb_tests/framework/assertions.py` for `assertSuccess` and `assertFailureCode`
 - `documentdb_tests/framework/executor.py` for `execute_command`
 - `docs/testing/TEST_FORMAT.md`
 - `docs/testing/FOLDER_STRUCTURE.md`
+- `docs/testing/TEST_COVERAGE.md`
 
 ---
 
@@ -62,7 +66,7 @@ The issue is still open, so the missing work is likely deeper second-pass covera
 
 ### Environment Setup
 
-Local environment used for Phase II:
+Local environment used for Phase II and Phase III:
 
 - OS: Windows 11
 - Repo path: `D:\Andranik\my coding tests\codepath\functional-tests`
@@ -84,6 +88,8 @@ Project prerequisites from `CONTRIBUTING.md`:
 pre-commit install -t pre-commit -t prepare-commit-msg -t pre-push
 ```
 
+Important setup note: dependency installation is already done in the local `.venv`. Functional execution requires a running MongoDB or DocumentDB instance. MongoDB was installed locally but the `MongoDB` Windows service was initially stopped; after starting it, the focused tests passed against `localhost:27017`.
+
 ### Steps to Reproduce
 
 1. Clone the fork and enter the project:
@@ -102,27 +108,41 @@ git checkout -b fix-issue-201
 git push -u origin fix-issue-201
 ```
 
-3. Inspect the current `$minN` array expression test:
+3. Inspect the existing `$minN` array expression smoke test:
 
 ```bash
 Get-Content documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_smoke_expression_minN-array-element.py
 ```
 
-4. Collect the focused test:
+4. Collect the existing smoke test:
 
 ```bash
 ..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_smoke_expression_minN-array-element.py --collect-only
 ```
 
-5. Try to run the focused test against local MongoDB:
+5. Run the new focused tests against local MongoDB:
 
 ```bash
-..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_smoke_expression_minN-array-element.py --connection-string "mongodb://localhost:27017/?serverSelectionTimeoutMS=2000" --engine-name mongodb
+..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py --connection-string "mongodb://localhost:27017/?serverSelectionTimeoutMS=2000" --engine-name mongodb
+
+..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py --connection-string "mongodb://localhost:27017/?serverSelectionTimeoutMS=2000" --engine-name mongodb
 ```
 
 ### Reproduction Evidence
 
-- `pytest --collect-only` collected 1 test successfully from the `$minN` array expression test file.
+- Initial `pytest --collect-only` collected 1 test successfully from the existing `$minN` array expression smoke test file.
+- Initial MongoDB execution failed during fixture setup because the local MongoDB service was not running:
+
+```text
+ConnectionError: Cannot connect to mongodb at mongodb://localhost:27017/?serverSelectionTimeoutMS=2000
+```
+
+- After running `Start-Service MongoDB`, the local MongoDB server was reachable on `localhost:27017`.
+- The null-filtering test collected successfully and passed against local MongoDB.
+- The `n=0` validation test collected successfully and passed against local MongoDB.
+- The `n=0` validation error code `5787908` was confirmed by running the invalid `$minN` array expression against local MongoDB and reading the returned server error code.
+- Upstream `main` already contains the basic `$minN` array smoke test.
+- GitHub issue #201 is still open as of June 14, 2026 and is titled "Add compatibility test for $minN (array element) (second pass)".
 
 ---
 
@@ -130,17 +150,23 @@ Get-Content documentdb_tests/compatibility/tests/core/operator/expressions/array
 
 ### Analysis
 
-The root cause is missing second-pass compatibility coverage, not missing framework support. The test folder and basic smoke file already exist. The contribution should add a focused behavioral test in the existing `$minN` array expression test area.
+The root cause is missing second-pass compatibility coverage, not missing framework support. The test folder and basic smoke file already exist. The contribution should add focused behavioral tests in the existing `$minN` array expression test area.
 
-The best candidate behavior to test is null handling with `n` larger than the number of non-null values. This is useful because it exercises behavior beyond the existing happy path while staying a positive result test that can use `assertSuccess`.
+The implemented coverage adds two second-pass behaviors:
 
-### Proposed Solution
+1. Null filtering with `n` larger than the number of returned non-null values.
+2. Validation that `n=0` is rejected because MongoDB requires `n` to resolve to a positive integer.
 
-Add one new test function to:
+### Implemented Solution
 
-`documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_smoke_expression_minN-array-element.py`
+Added two new focused test files instead of modifying the existing smoke test:
 
-The new test should insert documents with arrays containing numbers and `None`, run an aggregation `$project` using `$minN`, and assert that the output contains the minimum non-null values in sorted order.
+- `documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_minN-array-element_null_filtering.py`
+- `documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_minN-array-element_n_validation.py`
+
+The null-filtering test inserts documents with arrays containing numbers and `None`, runs an aggregation `$project` using `$minN`, and asserts that the output contains the minimum non-null values in sorted order.
+
+The `n` validation test inserts one document, runs `$minN` with `n: 0`, and uses `assertFailureCode` to verify MongoDB returns error code `5787908`.
 
 ### Implementation Plan
 
@@ -152,96 +178,167 @@ Using the UMPIRE framework:
 
 **Plan:**
 
-1. Add a second test function in the existing `$minN` array expression file.
-2. Use `collection.insert_many` with arrays such as `[None, 8, 2, None, 5]`.
-3. Run:
+1. Keep the existing `$minN` smoke test unchanged.
+2. Add a separate null-filtering test file.
+3. Use `collection.insert_many` with arrays containing `None` and numbers.
+4. Run:
 
 ```python
 {"$project": {"minValues": {"$minN": {"n": 5, "input": "$values"}}}}
 ```
 
-4. Assert expected output such as `[2, 5, 8]`, showing null values are excluded and `n` can be larger than the remaining values.
-5. Keep one assertion in the test and use `assertSuccess`.
+5. Assert expected output such as `[2, 5, 8]`, showing null values are excluded and `n` can be larger than the remaining values.
+6. Add a separate `n` validation test file.
+7. Add `N_ARRAY_ELEMENT_NON_POSITIVE_N_ERROR = 5787908` to `documentdb_tests/framework/error_codes.py`.
+8. Use `assertFailureCode` to verify `$minN` rejects `n: 0`.
 
-**Implement:** Phase III will implement this on branch `fix-issue-201`.
+**Implement:** Phase III implemented these changes locally on branch `fix-issue-201`.
 
-**Review:** Before submitting, check that the test:
+**Review:** Before submitting, check that the tests:
 
-- Has a descriptive `test_` function name
-- Has a docstring
-- Uses `execute_command`
-- Uses framework assertion helpers instead of plain `assert`
-- Keeps one assertion in the test function
-- Stays in the correct feature folder
+- Have descriptive `test_` function names
+- Have docstrings
+- Use `execute_command`
+- Use framework assertion helpers instead of plain `assert`
+- Keep one assertion in each test function
+- Stay in the correct feature folder
+- Keep the existing smoke test unchanged
 
 **Evaluate:** Verify with:
 
 ```bash
-..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_smoke_expression_minN-array-element.py --collect-only
+..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py --collect-only
+
+..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py --collect-only
 ```
 
 Then run against a real MongoDB or DocumentDB instance:
 
 ```bash
-..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_smoke_expression_minN-array-element.py --connection-string "mongodb://localhost:27017" --engine-name mongodb
+..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py --connection-string "mongodb://localhost:27017/?serverSelectionTimeoutMS=2000" --engine-name mongodb
+
+..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py --connection-string "mongodb://localhost:27017/?serverSelectionTimeoutMS=2000" --engine-name mongodb
 ```
 
-Finally run quality checks:
+Finally run quality checks through the project virtual environment:
 
 ```bash
-pre-commit run --all-files
+..\.venv\Scripts\python.exe -m black --check documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py documentdb_tests\framework\error_codes.py
+..\.venv\Scripts\python.exe -m isort --check-only documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py documentdb_tests\framework\error_codes.py
+..\.venv\Scripts\python.exe -m flake8 documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py documentdb_tests\framework\error_codes.py
 ```
 
 ---
 
 ## Testing Strategy
 
-### Unit Tests
+### Focused Tests
 
-- [ ] Test case 1: [Description]
-- [ ] Test case 2: [Description]
-- [ ] Test case 3: [Description]
+- [x] Add `$minN` array expression test for arrays containing `null` values.
+- [x] Verify the result excludes `null` and returns the minimum non-null values.
+- [x] Verify the test still behaves correctly when `n` is greater than the number of returned values.
+- [x] Add `$minN` array expression validation test for `n=0`.
+- [x] Verify invalid `n=0` fails with error code `5787908`.
 
-### Integration Tests
+### Manual / Local Validation
 
-- [ ] Integration scenario 1
-- [ ] Integration scenario 2
-
-### Manual Testing
-
-[What you tested manually and results]
+- [x] Confirmed the existing test file collects successfully.
+- [x] Confirmed local execution needs a running MongoDB or DocumentDB instance.
+- [x] Started the local MongoDB Windows service.
+- [x] Ran the null-filtering `$minN` test file against local MongoDB.
+- [x] Ran the `n` validation `$minN` test file against local MongoDB.
+- [x] Ran focused `black`, `isort`, and `flake8` checks through `.venv`.
+- [x] Ran full `mypy documentdb_tests/ --no-site-packages` through `.venv`.
+- [ ] Run `pre-commit run --all-files` successfully through the system hook environment.
 
 ---
 
 ## Implementation Notes
 
-### Week [X] Progress
+### Phase II Progress
 
-[What you built this week, challenges faced, decisions made]
+- Read `CONTRIBUTING.md`, `README.md`, `requirements.txt`, `requirements-dev.txt`, `docs/testing/TEST_FORMAT.md`, `docs/testing/FOLDER_STRUCTURE.md`, and `docs/testing/TEST_COVERAGE.md`.
+- Confirmed the correct feature location for `$minN` array expression tests.
+- Created and pushed branch `fix-issue-201`.
+- Installed the project's pre-commit hooks.
+- Confirmed upstream `main` already has a basic `$minN` smoke test.
+- Confirmed issue #201 remains open and is a second-pass coverage issue.
+- Identified MongoDB/DocumentDB availability as the remaining local execution dependency.
 
-### Week [Y] Progress
+### Phase III Progress
 
-[Continue documenting as you work]
+- Added a new null-filtering test file without modifying the existing smoke test.
+- Added a new `n` validation test file that uses `assertFailureCode`.
+- Added `N_ARRAY_ELEMENT_NON_POSITIVE_N_ERROR = 5787908` to `documentdb_tests/framework/error_codes.py`.
+- Confirmed MongoDB was installed locally but the Windows service was initially stopped.
+- Started the local MongoDB service and verified focused test execution against `localhost:27017`.
+- Verified the new files follow the repository's test-format and folder-structure rules.
+- Confirmed no commit or pull request has been created yet.
 
 ### Code Changes
 
-- **Files modified:** [List]
-- **Key commits:** [Links to important commits]
-- **Approach decisions:** [Why you chose certain approaches]
+Implemented locally:
+
+- `documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_minN-array-element_null_filtering.py`
+  - Adds `test_minN_array_element_filters_null_values_when_n_exceeds_available_values`.
+  - Uses `assertSuccess`.
+  - Verifies `$minN` filters `null` values and returns all available non-null values when `n` exceeds the available values.
+- `documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_minN-array-element_n_validation.py`
+  - Adds `test_minN_array_element_rejects_zero_n`.
+  - Uses `assertFailureCode`.
+  - Verifies `$minN` rejects `n: 0`.
+- `documentdb_tests/framework/error_codes.py`
+  - Adds `N_ARRAY_ELEMENT_NON_POSITIVE_N_ERROR = 5787908`.
+
+The existing smoke test file was intentionally left unchanged.
+
+### Local Validation Results
+
+Passed:
+
+```bash
+..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py --collect-only
+
+..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py --connection-string "mongodb://localhost:27017/?serverSelectionTimeoutMS=2000" --engine-name mongodb
+
+..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py --collect-only
+
+..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py --connection-string "mongodb://localhost:27017/?serverSelectionTimeoutMS=2000" --engine-name mongodb
+```
+
+Focused quality checks passed through `.venv`:
+
+```bash
+..\.venv\Scripts\python.exe -m black --check documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py
+..\.venv\Scripts\python.exe -m isort --check-only documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py
+..\.venv\Scripts\python.exe -m flake8 documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py
+
+..\.venv\Scripts\python.exe -m black --check documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py documentdb_tests\framework\error_codes.py
+..\.venv\Scripts\python.exe -m isort --check-only documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py documentdb_tests\framework\error_codes.py
+..\.venv\Scripts\python.exe -m flake8 documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py documentdb_tests\framework\error_codes.py
+```
+
+Full type check passed through `.venv`:
+
+```bash
+..\.venv\Scripts\python.exe -m mypy documentdb_tests\ --no-site-packages
+```
+
+Known local environment issue:
+
+- `pre-commit run --all-files` currently invokes system `C:\Python314\python.EXE`, which does not have `black`, `isort`, `flake8`, or `mypy` installed. The equivalent checks passed when run through the project `.venv`.
 
 ---
 
 ## Pull Request
 
-**PR Link:** [GitHub PR URL when submitted]
+**PR Link:** Not submitted yet.
 
-**PR Description:** [Draft or final PR description - much of the content above can be adapted]
+**Draft PR Summary:**
 
-**Maintainer Feedback:**
-- [Date]: [Summary of feedback received]
-- [Date]: [How you addressed it]
+Add second-pass compatibility coverage for the `$minN` array expression operator by testing null filtering, `n` larger than the returned non-null values, and invalid `n=0` error handling.
 
-**Status:** [Awaiting review / Iterating / Approved / Merged]
+**Status:** Implementation complete locally; README updated for review; commit, push, and pull request not submitted yet.
 
 ---
 
@@ -249,20 +346,29 @@ pre-commit run --all-files
 
 ### Technical Skills Gained
 
-[What you learned technically]
+- Learned how the DocumentDB functional test framework organizes tests by feature tree.
+- Learned that functional tests use `execute_command` and framework assertion helpers.
+- Learned that running these tests requires a live MongoDB or DocumentDB instance.
+- Learned when to use `assertSuccess` for successful aggregation output and `assertFailureCode` for error-code validation.
+- Learned that some aggregation expression validation is runtime-based and requires at least one input document to trigger the error.
 
 ### Challenges Overcome
 
-[What was hard and how you solved it]
+- Git initially reported a safe-directory ownership warning in the sandbox, so commands were run with a per-command `safe.directory` option.
+- The test environment had dependencies installed in `.venv`, but the system Python did not.
+- Pre-commit initially failed because Git did not trust the sandbox-owned checkout and tried to write its cache outside the workspace; rerunning it with temporary safe-directory and `PRE_COMMIT_HOME` environment variables fixed the setup.
+- Functional execution initially failed because the local MongoDB service was stopped.
+- The first proposed null-filtering filename failed collection validation because files in feature folders must include the exact parent folder name. The file was renamed to include `minN-array-element`.
+- `pre-commit run --all-files` still fails in the local shell because the system Python used by the hooks is missing the required tools, even though the `.venv` checks pass.
 
 ### What I'd Do Differently Next Time
 
-[Reflection on your process]
 
 ---
 
 ## Resources Used
 
-- [Link to helpful documentation]
-- [Tutorial or Stack Overflow post that helped]
-- [GitHub issues or discussions that helped]
+- Project issue: https://github.com/documentdb/functional-tests/issues/201
+- Project contribution guide: https://github.com/documentdb/functional-tests/blob/main/CONTRIBUTING.md
+- MongoDB `$minN` array expression docs: https://www.mongodb.com/docs/manual/reference/operator/aggregation/minn-array-element/
+- Working branch: https://github.com/andavag/functional-tests/tree/fix-issue-201
