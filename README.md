@@ -5,7 +5,7 @@
 **Issue:** https://github.com/documentdb/functional-tests/issues/201  
 **Project Fork:** https://github.com/andavag/functional-tests  
 **Working Branch:** https://github.com/andavag/functional-tests/tree/fix-issue-201  
-**Status:** Phase III Implementation Complete - Local Verification Passed, Commit Pending
+**Status:** Phase IV Complete - PR Submitted and Local Verification Passed
 
 ---
 
@@ -273,7 +273,19 @@ Finally run quality checks through the project virtual environment:
 - Confirmed MongoDB was installed locally but the Windows service was initially stopped.
 - Started the local MongoDB service and verified focused test execution against `localhost:27017`.
 - Verified the new files follow the repository's test-format and folder-structure rules.
-- Confirmed no commit or pull request has been created yet.
+- Created the local signed-off commit `bd0b3e5 Add minN array element compatibility tests`.
+- Pushed the code commit to the personal fork branch and submitted the pull request.
+
+### Phase IV Pre-Submission Check
+
+Current check from June 27, 2026:
+
+- `functional-tests` is on branch `fix-issue-201` and is ahead of `origin/fix-issue-201` by one local commit.
+- `git diff origin/main...HEAD` is limited to the two new `$minN-array-element` test files and `documentdb_tests/framework/error_codes.py`.
+- `git diff --check origin/main...HEAD` passed with no whitespace errors.
+- No debug statements such as `print`, `pdb`, `TODO`, `FIXME`, or `breakpoint` were found in the changed files.
+- MongoDB was running locally and reachable on `localhost:27017`.
+- The focused `$minN-array-element` tests passed against local MongoDB.
 
 ### Code Changes
 
@@ -294,51 +306,82 @@ The existing smoke test file was intentionally left unchanged.
 
 ### Local Validation Results
 
-Passed:
+Passed in the latest Phase IV check:
 
 ```bash
-..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py --collect-only
-
-..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py --connection-string "mongodb://localhost:27017/?serverSelectionTimeoutMS=2000" --engine-name mongodb
-
-..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py --collect-only
-
-..\.venv\Scripts\python.exe -m pytest documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py --connection-string "mongodb://localhost:27017/?serverSelectionTimeoutMS=2000" --engine-name mongodb
+& "D:\Andranik\my coding tests\codepath\.venv\Scripts\python.exe" -m pytest "documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py" "documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py" --collect-only
 ```
 
-Focused quality checks passed through `.venv`:
+Result: 2 tests collected successfully.
+
+Focused MongoDB execution passed in the latest Phase IV check:
 
 ```bash
-..\.venv\Scripts\python.exe -m black --check documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py
-..\.venv\Scripts\python.exe -m isort --check-only documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py
-..\.venv\Scripts\python.exe -m flake8 documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py
-
-..\.venv\Scripts\python.exe -m black --check documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py documentdb_tests\framework\error_codes.py
-..\.venv\Scripts\python.exe -m isort --check-only documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py documentdb_tests\framework\error_codes.py
-..\.venv\Scripts\python.exe -m flake8 documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py documentdb_tests\framework\error_codes.py
+& "D:\Andranik\my coding tests\codepath\.venv\Scripts\python.exe" -m pytest "documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py" "documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py" --connection-string "mongodb://localhost:27017/?serverSelectionTimeoutMS=2000" --engine-name mongodb
 ```
 
-Full type check passed through `.venv`:
+Result: 2 passed.
+
+Focused quality checks passed through `.venv` in the latest Phase IV check:
 
 ```bash
-..\.venv\Scripts\python.exe -m mypy documentdb_tests\ --no-site-packages
+& "D:\Andranik\my coding tests\codepath\.venv\Scripts\python.exe" -m black --check "documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py" "documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py" "documentdb_tests\framework\error_codes.py"
+& "D:\Andranik\my coding tests\codepath\.venv\Scripts\python.exe" -m isort --check-only "documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py" "documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py" "documentdb_tests\framework\error_codes.py"
+& "D:\Andranik\my coding tests\codepath\.venv\Scripts\python.exe" -m flake8 "documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_null_filtering.py" "documentdb_tests\compatibility\tests\core\operator\expressions\array\minN-array-element\test_minN-array-element_n_validation.py" "documentdb_tests\framework\error_codes.py"
+```
+
+Full type check passed through `.venv` in the latest Phase IV check:
+
+```bash
+& "D:\Andranik\my coding tests\codepath\.venv\Scripts\python.exe" -m mypy documentdb_tests\ --no-site-packages
 ```
 
 Known local environment issue:
 
+- If MongoDB is stopped in a future shell, the focused functional tests require starting the local `MongoDB` Windows service before rerunning.
 - `pre-commit run --all-files` currently invokes system `C:\Python314\python.EXE`, which does not have `black`, `isort`, `flake8`, or `mypy` installed. The equivalent checks passed when run through the project `.venv`.
 
 ---
 
 ## Pull Request
 
-**PR Link:** Not submitted yet.
+**PR Link:** Submitted on GitHub; direct URL not recorded in this local README yet.
 
-**Draft PR Summary:**
+**PR Description:**
 
-Add second-pass compatibility coverage for the `$minN` array expression operator by testing null filtering, `n` larger than the returned non-null values, and invalid `n=0` error handling.
+Submitted PR description:
 
-**Status:** Implementation complete locally; README updated for review; commit, push, and pull request not submitted yet.
+```markdown
+## What does this PR do?
+
+Adds second-pass compatibility coverage for the `$minN` array expression operator. The new tests cover null filtering, `n` larger than the number of returned non-null values, and invalid `n=0` error handling.
+
+## Why was this PR needed?
+
+Issue #201 asks for deeper `$minN` array expression coverage beyond the existing smoke test. The new tests document MongoDB-compatible behavior for null filtering and positive-integer validation of the `n` argument.
+
+## What are the relevant issue numbers?
+
+Closes #201
+
+## Validation
+
+- Collected both new `$minN-array-element` tests successfully.
+- `black --check`, `isort --check-only`, `flake8`, and `mypy documentdb_tests/ --no-site-packages` passed through the project `.venv`.
+- Live MongoDB execution passed against `mongodb://localhost:27017/?serverSelectionTimeoutMS=2000`.
+
+## Does this PR meet the acceptance criteria?
+
+- [x] Tests added for new/changed behavior
+- [x] Focused collection and quality checks passing
+- [x] Follows project style guide
+- [x] No breaking changes introduced
+- [x] Documentation not required for this test-only change
+```
+
+**Maintainer Feedback:** None received yet.
+
+**Status:** PR submitted; awaiting maintainer review.
 
 ---
 
