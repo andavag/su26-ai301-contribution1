@@ -354,29 +354,25 @@ Submitted PR description:
 ```markdown
 ## What does this PR do?
 
-Adds second-pass compatibility coverage for the `$minN` array expression operator. The new tests cover null filtering, `n` larger than the number of returned non-null values, and invalid `n=0` error handling.
+Adds second-pass compatibility coverage for the `$minN` array expression operator.
+
+This PR adds tests for:
+- filtering `null` values from `$minN` array input
+- returning all available non-null values when `n` is larger than the number of usable values
+- rejecting invalid `n: 0` input with the expected MongoDB error code
 
 ## Why was this PR needed?
 
-Issue #201 asks for deeper `$minN` array expression coverage beyond the existing smoke test. The new tests document MongoDB-compatible behavior for null filtering and positive-integer validation of the `n` argument.
+Issue #201 asks for additional `$minN` array expression compatibility coverage beyond the existing smoke test. The existing test confirms the basic happy path, but it does not cover edge behavior such as null handling or validation of invalid `n` values.
 
-## What are the relevant issue numbers?
+These tests help document expected MongoDB-compatible behavior and protect against future regressions.
 
-Closes #201
+## How did you test it?
 
-## Validation
+Focused tests passed against local MongoDB:
 
-- Collected both new `$minN-array-element` tests successfully.
-- `black --check`, `isort --check-only`, `flake8`, and `mypy documentdb_tests/ --no-site-packages` passed through the project `.venv`.
-- Live MongoDB execution passed against `mongodb://localhost:27017/?serverSelectionTimeoutMS=2000`.
-
-## Does this PR meet the acceptance criteria?
-
-- [x] Tests added for new/changed behavior
-- [x] Focused collection and quality checks passing
-- [x] Follows project style guide
-- [x] No breaking changes introduced
-- [x] Documentation not required for this test-only change
+```bash
+python -m pytest documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_minN-array-element_null_filtering.py documentdb_tests/compatibility/tests/core/operator/expressions/array/minN-array-element/test_minN-array-element_n_validation.py --connection-string "mongodb://localhost:27017/?serverSelectionTimeoutMS=2000" --engine-name mongodb
 ```
 
 **Maintainer Feedback:** None received yet.
@@ -406,8 +402,7 @@ Closes #201
 
 ### What I'd Do Differently Next Time
 
-
----
+Next time, I would spend more time researching the issue before starting implementation so I can better understand the exact work needed, the existing test coverage, and the project’s expectations. I would also compare a few issue types before choosing one, because a different kind of issue may have been easier to scope and validate.
 
 ## Resources Used
 
